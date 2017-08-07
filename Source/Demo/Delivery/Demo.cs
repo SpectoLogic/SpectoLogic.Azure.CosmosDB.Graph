@@ -34,8 +34,8 @@ namespace Demo.Delivery
             await client.UpsertGraphDocumentsAsync(collection, context);
 
             MemoryGraph partialGraph = new MemoryGraph();
-            GraphConnection graphConnection = new GraphConnection(client, collection);
-            Microsoft.Azure.Graphs.GraphCommand cmd = new GraphCommand(graphConnection);
+            object graphConnection =  GraphConnectionFactory.Create(client, collection);
+            Microsoft.Azure.Graphs.GraphCommand cmd = GraphCommandFactory.Create(graphConnection);
             cmd.SetOutputFormat(OutputFormat.GraphSON); // This is necessary in order to be able to call "NextAsPOCO"
 
             GraphTraversal verticesTrav = cmd.g().V(); 

@@ -109,13 +109,13 @@ namespace Demo
                 Console.WriteLine("--------------------------------------------------------------------");
                 Console.Write("Connecting with GraphConnection object...");
                 // Connect with GraphConnection
-                GraphConnection graphConnection = await GraphConnection.Create(Account_DemoBuild_Hobbit, Account_DemoBuild_Hobbit_Key, "demodb", "thehobbit");
+                object graphConnection = GraphConnectionFactory.Create(client, collection);
                 Console.WriteLine("Done");
 
                 // Drop previous context (optional if the same graph)
                 partialGraph.Drop();
 
-                Microsoft.Azure.Graphs.GraphCommand cmd = new GraphCommand(graphConnection);
+                Microsoft.Azure.Graphs.GraphCommand cmd = GraphCommandFactory.Create(graphConnection);
                 cmd.SetOutputFormat(OutputFormat.GraphSON); // This is necessary in order to be able to call "NextAsPOCO"
 
                 GraphTraversal placeTrav = cmd.g().V().HasLabel("place"); 
