@@ -13,6 +13,69 @@ using System.Threading.Tasks;
 
 namespace SpectoLogic.Azure.Graph.Serializer
 {
+    public class GraphSerializer<T, TIn, TOut> : IGraphSerializer where T : new()
+    {
+        public void AddDefinedPropertyListItem(GraphDefinedPropertyType propertyType, object targetInstance, object value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public JObject ConvertToDocDBJObject(object poco)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IGraphSerializer CreateGraphSerializerForItem(GraphDefinedPropertyType propertyType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IGraphSerializer CreateGraphSerializerForListItem(GraphDefinedPropertyType propertyType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IGraphSerializer CreateGraphSerializerForType(Type itemType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public object CreateItemInstanceObject(string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public object CreateListItemInstance(GraphDefinedPropertyType propertyType, string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public object GetCustomProperty(string propertyName, object targetInstance)
+        {
+            throw new NotImplementedException();
+        }
+
+        public object GetDefinedProperty(GraphDefinedPropertyType propertyType, object targetInstance)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsEdge()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsVertex()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SetDefinedProperty(GraphDefinedPropertyType propertyType, object targetInstance, object value)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     public class GraphSerializer<T> : IGraphSerializer where T : new()
     {
         /// <summary>
@@ -33,11 +96,32 @@ namespace SpectoLogic.Azure.Graph.Serializer
         /// richer data availabilty and prevention of duplicated entries like Edges that contain only partial information although they have been retrieved earlier or later.
         /// </summary>
         IGraphContext myContext;
+        Type myTIn = null;     // Type of In-Vertex or In-Edge
+        Type myTOut = null;    // Type of Out-Vertex or Out-Edge
 
         internal GraphSerializer(IGraphContext context)
         {
             myContext = context;
             Type TType = typeof(T);
+
+            Type[] interfaces = TType.GetInterfaces();
+            var vInterface = interfaces.Where(i => i.Name == "IVertex`2").FirstOrDefault();
+            var eInterface = interfaces.Where(i => i.Name == "IEdge`2").FirstOrDefault();
+            myClassAttribute = TType.GetCustomAttribute<GraphClassAttribute>();
+            if (vInterface != null)
+            {
+                myClassAttribute.ElementType = GraphElementType.Vertex;
+                Type[] genericArgs = vInterface.GetGenericArguments();
+                myTIn = genericArgs[0];
+                myTOut = genericArgs[1];
+            }
+            if (eInterface != null)
+            {
+                myClassAttribute.ElementType = GraphElementType.Edge;
+                Type[] genericArgs = eInterface.GetGenericArguments();
+                myTIn = genericArgs[0];
+                myTOut = genericArgs[1];
+            }
 
             #region Evaluate Properties 
             PropertyInfo[] propertyInfos = TType.GetProperties();
@@ -65,7 +149,7 @@ namespace SpectoLogic.Azure.Graph.Serializer
                         case "inv": { detectedDefinedType = GraphDefinedPropertyType.InV; } break;
                         case "outv": { detectedDefinedType = GraphDefinedPropertyType.OutV; } break;
                         case "ine": { detectedDefinedType = GraphDefinedPropertyType.InE; } break;
-                        case "oute": { detectedDefinedType = GraphDefinedPropertyType.OutE; } break;
+                        case "oute": {detectedDefinedType = GraphDefinedPropertyType.OutE;} break;
                         default:
                             {
                                 definedDetected = false;
@@ -84,8 +168,16 @@ namespace SpectoLogic.Azure.Graph.Serializer
             }
             #endregion
 
+            if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.InV))
+                myTIn = myPI_Defined[GraphDefinedPropertyType.InV].PropertyType;
+            if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.OutV))
+                myTOut = myPI_Defined[GraphDefinedPropertyType.OutV].PropertyType;
+            if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.InE))
+                myTIn = myPI_Defined[GraphDefinedPropertyType.InE].PropertyType.GenericTypeArguments[0]; // Must be a generic List
+            if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.OutE))
+                myTOut = myPI_Defined[GraphDefinedPropertyType.OutE].PropertyType.GenericTypeArguments[0]; // Must be a generic List
+
             #region Evaluate if given Type is Vertex or Edge
-            myClassAttribute = TType.GetCustomAttribute<GraphClassAttribute>();
             if (myClassAttribute == null)
             {
 
@@ -95,7 +187,8 @@ namespace SpectoLogic.Azure.Graph.Serializer
                     myClassAttribute = new GraphClassAttribute() { ElementType = GraphElementType.Vertex };
             }
             #endregion
-
+            if (myClassAttribute.TypeKey==null)
+                myClassAttribute.TypeKey = TType.Assembly.FullName + "|" + TType.FullName;
         }
 
         public IGraphContext GraphContext
@@ -205,6 +298,11 @@ namespace SpectoLogic.Azure.Graph.Serializer
             return !IsEdge();
         }
 
+        public bool IsSerializeTypeInformation()
+        {
+            return myClassAttribute.SerializeTypeInformation;
+        }
+
         /// <summary>
         /// Deserializes a given GraphSON to either a list of instances of
         ///     Microsoft.Azure.Graphs.Elements.Vertex or 
@@ -258,6 +356,13 @@ namespace SpectoLogic.Azure.Graph.Serializer
                     );
             if (IsVertex())
             {
+                if (this.IsSerializeTypeInformation())
+                {
+                    jOutput.Add(new JProperty("_type", new[]{ new JObject(
+                                new JProperty("id",Guid.NewGuid().ToString("D")),
+                                new JProperty("_value",myClassAttribute.TypeKey)
+                            ) }));
+                }
                 foreach (KeyValuePair<string, PropertyInfo> cp in this.myPI_Custom)
                 {
                     PropertyInfo pi = cp.Value;
@@ -280,16 +385,26 @@ namespace SpectoLogic.Azure.Graph.Serializer
             }
             else
             {
-                IGraphSerializer outVSerial = CreateGraphSerializerForItem(GraphDefinedPropertyType.OutV);
-                IGraphSerializer inVSerial = CreateGraphSerializerForItem(GraphDefinedPropertyType.InV);
                 object outV = this.GetDefinedProperty(GraphDefinedPropertyType.OutV, poco);
+                IGraphSerializer outVSerial = outV != null ? CreateGraphSerializerForType(outV.GetType()) : null;
+
                 object inV = this.GetDefinedProperty(GraphDefinedPropertyType.InV, poco);
+                IGraphSerializer inVSerial = inV != null ? CreateGraphSerializerForType(inV.GetType()) : null;
 
                 jOutput.Add(new JProperty("_isEdge", "true"));
-                jOutput.Add(new JProperty("_sink", inVSerial.GetDefinedProperty(GraphDefinedPropertyType.Id, inV)));
-                jOutput.Add(new JProperty("_sinkLabel", inVSerial.GetDefinedProperty(GraphDefinedPropertyType.Label, inV)));
-                jOutput.Add(new JProperty("_vertexId", outVSerial.GetDefinedProperty(GraphDefinedPropertyType.Id, outV)));
-                jOutput.Add(new JProperty("_vertexLabel", outVSerial.GetDefinedProperty(GraphDefinedPropertyType.Label, outV)));
+                if (inVSerial != null)
+                {
+                    jOutput.Add(new JProperty("_sink", inVSerial.GetDefinedProperty(GraphDefinedPropertyType.Id, inV)));
+                    jOutput.Add(new JProperty("_sinkLabel", inVSerial.GetDefinedProperty(GraphDefinedPropertyType.Label, inV)));
+                }
+                if (outVSerial != null)
+                {
+                    jOutput.Add(new JProperty("_vertexId", outVSerial.GetDefinedProperty(GraphDefinedPropertyType.Id, outV)));
+                    jOutput.Add(new JProperty("_vertexLabel", outVSerial.GetDefinedProperty(GraphDefinedPropertyType.Label, outV)));
+                }
+
+                if (this.IsSerializeTypeInformation())
+                    jOutput.Add(new JProperty("_type", myClassAttribute.TypeKey));
 
                 foreach (KeyValuePair<string, PropertyInfo> cp in this.myPI_Custom)
                 {
@@ -521,6 +636,10 @@ namespace SpectoLogic.Azure.Graph.Serializer
         public IGraphSerializer CreateGraphSerializerForListItem(Type propertyType)
         {
             return GraphSerializerFactory.CreateGraphSerializer(myContext, propertyType);
+        }
+        public IGraphSerializer CreateGraphSerializerForType(Type itemType)
+        {
+            return GraphSerializerFactory.CreateGraphSerializer(myContext, itemType);
         }
     }
 }

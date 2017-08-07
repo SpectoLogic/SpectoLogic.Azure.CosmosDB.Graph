@@ -44,7 +44,7 @@ namespace SpectoLogic.Azure.Graph.Extensions
         /// <param name="trav">Extension Object GraphTraversal</param>
         /// <param name="context">Context that can store GraphElements. If you retrieved vertices and then an edge refering to those vertices they will be automatically linked.</param>
         /// <returns></returns>
-        public static async Task<IList<T>> NextAsPOCO<T>(this GraphTraversal trav,IGraphContext context=null) where T : new()
+        public static async Task<IList<T>> NextAsPOCO<T>(this GraphTraversal trav, IGraphContext context = null) where T : new()
         {
             List<T> result = new List<T>();
             /// Verify if the OutputFormat of the GraphCommand was set to GraphSON!
@@ -55,7 +55,7 @@ namespace SpectoLogic.Azure.Graph.Extensions
 
             GraphSerializer<T> serializer = GraphSerializerFactory.CreateGraphSerializer<T>(context);
             // If context is obmitted clear data from previous requests.
-            if (context == null) serializer.GraphContext.Drop(); 
+            if (context == null) serializer.GraphContext.Drop();
 
             // Edges and Vertices must be treated separately
             if (serializer.IsEdge())
@@ -89,13 +89,13 @@ namespace SpectoLogic.Azure.Graph.Extensions
         /// <param name="gremlinQuery">ExtensionObject IDocumentQuery</param>
         /// <param name="context">Context that can store GraphElements. If you retrieved vertices and then an edge refering to those vertices they will be automatically linked.</param>
         /// <returns></returns>
-        public static async Task<IList<T>> ExecuteNextAsyncAsPOCO<T>(this IDocumentQuery gremlinQuery,IGraphContext context=null) where T : new()
+        public static async Task<IList<T>> ExecuteNextAsyncAsPOCO<T>(this IDocumentQuery gremlinQuery, IGraphContext context = null) where T : new()
         {
             List<T> result = new List<T>();
 
             GraphSerializer<T> serializer = GraphSerializerFactory.CreateGraphSerializer<T>(context);
             // If context is obmitted clear data from previous requests.
-            if (context == null) serializer.GraphContext.Drop(); 
+            if (context == null) serializer.GraphContext.Drop();
             if (serializer.IsEdge())
             {
                 IDocumentQuery<Edge> edgeQuery = gremlinQuery as IDocumentQuery<Edge>;
@@ -120,15 +120,32 @@ namespace SpectoLogic.Azure.Graph.Extensions
         /// <param name="collection">DocumentCollection to add the GraphElement to</param>
         /// <param name="poco"></param>
         /// <returns></returns>
-        public static async Task<ResourceResponse<Document>> CreateGraphDocumentAsync (this DocumentClient client, DocumentCollection collection,object poco)
+        public static async Task<ResourceResponse<Document>> CreateGraphDocumentAsync(this DocumentClient client, DocumentCollection collection, object poco)
         {
-            IGraphSerializer serializer = GraphSerializerFactory.CreateGraphSerializer(null,poco.GetType());
+            IGraphSerializer serializer = GraphSerializerFactory.CreateGraphSerializer(null, poco.GetType());
             return await client.CreateDocumentAsync(collection.SelfLink, serializer.ConvertToDocDBJObject(poco));
         }
-        public static async Task<ResourceResponse<Document>> CreateGraphDocumentAsync<T>(this DocumentClient client, DocumentCollection collection, T poco) where T:new()
+        public static async Task<ResourceResponse<Document>> CreateGraphDocumentAsync<T>(this DocumentClient client, DocumentCollection collection, T poco) where T : new()
         {
             GraphSerializer<T> serializer = GraphSerializerFactory.CreateGraphSerializer<T>();
             return await client.CreateDocumentAsync(collection.SelfLink, serializer.ConvertToDocDBJObject(poco));
+        }
+
+        public static async Task<ResourceResponse<Document>> UpsertGraphDocumentAsync<T>(this DocumentClient client, DocumentCollection collection, T poco)
+        {
+            IGraphSerializer serializer = GraphSerializerFactory.CreateGraphSerializer(null, poco.GetType());
+            return await client.UpsertDocumentAsync(collection.SelfLink, serializer.ConvertToDocDBJObject(poco));
+        }
+
+        public static async Task<List<ResourceResponse<Document>>> UpsertGraphDocumentsAsync(this DocumentClient client, DocumentCollection collection, IGraphContext context)
+        {
+            List<ResourceResponse<Document>> results = new List<ResourceResponse<Document>>();
+            foreach(object poco in context.Elements)
+            {
+                IGraphSerializer serializer = GraphSerializerFactory.CreateGraphSerializer(context, poco.GetType());
+                results.Add(await client.UpsertDocumentAsync(collection.SelfLink, serializer.ConvertToDocDBJObject(poco)));
+            }
+            return results;
         }
 
     }

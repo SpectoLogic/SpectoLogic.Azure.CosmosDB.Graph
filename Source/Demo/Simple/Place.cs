@@ -14,6 +14,7 @@ namespace Demo
         public Place()
         {
             this.Id = Guid.NewGuid().ToString("D");
+            this.Label = "place";
         }
         [GraphProperty(DefinedProperty = GraphDefinedPropertyType.Id)]
         public string Id { get; set; }

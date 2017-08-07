@@ -86,14 +86,22 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Path.cs" />
-    <Compile Include="Place.cs" />
+    <Compile Include="Delivery\Delivers.cs" />
+    <Compile Include="Delivery\Demo.cs" />
+    <Compile Include="Delivery\IDemoVertex.cs" />
+    <Compile Include="Delivery\IDemoEdge.cs" />
+    <Compile Include="Delivery\Person.cs" />
+    <Compile Include="Delivery\Place.cs" />
+    <Compile Include="Simple\Path.cs" />
+    <Compile Include="Simple\Place.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="AppSettingsSecrets.config" />
+    <None Include="AppSettingsSecrets.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

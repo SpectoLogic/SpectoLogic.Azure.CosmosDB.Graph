@@ -2,14 +2,12 @@
 
 namespace SpectoLogic.Azure.Graph
 {
-    public interface IEdge<I, O> : IGraphElement where I : new() where O : new()
+    public interface IEdge<InVertex, OutVertex> : IGraphElement 
     {
         [JsonIgnore]
-        [GraphProperty(DefinedProperty = GraphDefinedPropertyType.InV)]
-        I InV { get; set; }
+        InVertex InV { get; set; }
 
         [JsonIgnore]
-        [GraphProperty(DefinedProperty = GraphDefinedPropertyType.OutV)]
-        O OutV { get; set; }
+        OutVertex OutV { get; set; }
     }
 }

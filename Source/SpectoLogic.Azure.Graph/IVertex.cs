@@ -3,14 +3,12 @@ using System.Collections.Generic;
 
 namespace SpectoLogic.Azure.Graph
 {
-    public interface IVertex<I,O> : IGraphElement where I:new() where O : new()
+    public interface IVertex<InEdge,OutEdge> : IGraphElement
     {
         [JsonIgnore]
-        [GraphProperty(DefinedProperty = GraphDefinedPropertyType.InE)]
-        IList<I> InE { get; set; }
+        IList<InEdge> InE { get; set; }
 
         [JsonIgnore]
-        [GraphProperty(DefinedProperty = GraphDefinedPropertyType.OutE)]
-        IList<O> OutE { get; set; }
+        IList<OutEdge> OutE { get; set; }
     }
 }

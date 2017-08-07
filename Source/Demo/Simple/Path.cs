@@ -15,10 +15,10 @@ namespace Demo
         {
             this.Id = Guid.NewGuid().ToString("D");
         }
-        public Path(string label, Place from, Place to, double weight)
+        public Path(Place from, Place to, double weight)
         {
             this.Id = Guid.NewGuid().ToString("D");
-            this.Label = label;
+            this.Label = "path";
             this.InV = to;
             this.OutV = from;
             this.weight = weight;

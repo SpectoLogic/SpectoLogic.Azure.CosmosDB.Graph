@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
+using System;
 
 namespace SpectoLogic.Azure.Graph.Serializer
 {
@@ -15,6 +16,7 @@ namespace SpectoLogic.Azure.Graph.Serializer
 
         IGraphSerializer CreateGraphSerializerForListItem(GraphDefinedPropertyType propertyType);
         IGraphSerializer CreateGraphSerializerForItem(GraphDefinedPropertyType propertyType);
+        IGraphSerializer CreateGraphSerializerForType(Type itemType);
 
         bool IsEdge();
         bool IsVertex();

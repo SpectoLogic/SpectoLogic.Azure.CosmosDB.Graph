@@ -57,5 +57,23 @@ namespace SpectoLogic.Azure.Graph.Serializer
             IGraphSerializer serializer = generic.Invoke(null, new object[] { context }) as IGraphSerializer;
             return serializer;
         }
+
+        /// <summary>
+        /// Allows to create a GraphSerializer for a Type that is defined as
+        /// a string which consists out of AssemblyFullName and TypeFullname separated through an |-character
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="itemTypeString"></param>
+        /// <returns></returns>
+        public static IGraphSerializer CreateGraphSerializer(IGraphContext context, string itemTypeString)
+        {
+            string[] types = itemTypeString.Split('|');
+            string fullAssemblyName = types[0];
+            string fullTypeName = types[1];
+            Assembly assembly = Assembly.Load(fullAssemblyName);
+            Type itemType = assembly.GetType(fullTypeName);
+            return CreateGraphSerializer(context, itemType);
+        }
+
     }
 }

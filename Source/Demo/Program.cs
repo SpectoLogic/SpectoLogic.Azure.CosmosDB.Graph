@@ -63,16 +63,22 @@ namespace Demo
                 Console.WriteLine("Done");
 
                 Console.WriteLine("---------------------------------------------------------");
+                Console.WriteLine("DEMO: Delivery Demo ");
+                Console.WriteLine("---------------------------------------------------------");
+                Delivery.Demo d = new Delivery.Demo();
+                await d.Execute(client, collection);
+
+
+                Console.WriteLine("---------------------------------------------------------");
                 Console.WriteLine("DEMO: Create custom objects and populate cosmosdb graph");
                 Console.WriteLine("---------------------------------------------------------");
 
-                Place cave = new Place() { Label = "place", name = "Cave of Hobbit" };
-                Place restaurant = new Place() { Label = "place", name = "Restaurant Green Dragon" };
-                Place europe = new Place() { Label = "place",
-                                             name = "Europe",
+                Place cave = new Place() { name = "Cave of Hobbit" };
+                Place restaurant = new Place() { name = "Restaurant Green Dragon" };
+                Place europe = new Place() { name = "Europe",
                                              country = GraphProperty.Create("country", "AT", "MetaTag1", "Austria").AddValue("FI", "MetaTag1", "Finnland")
                 };
-                Path hobbitPath = new Path("path", cave, restaurant, 2.3);
+                Path hobbitPath = new Path(cave, restaurant, 2.3);
 
                 await client.CreateGraphDocumentAsync<Place>(collection, cave);
                 await client.CreateGraphDocumentAsync<Place>(collection, restaurant);
