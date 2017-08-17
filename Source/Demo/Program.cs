@@ -102,7 +102,12 @@ namespace Demo
                         Console.WriteLine($"Vertex ==> Label:{result.Label} Name:{result.name}");
                     }
                 }
-                
+
+                #region EXPERIMENTAL DEMO
+                /// =================================================================================================
+                /// IMPORTANT: The following code makes use of the internal GraphTraversal class, which should not
+                /// be used according to the documentation of Microsofts Graph Library. Use at your own risk.
+                /// =================================================================================================
                 Console.WriteLine("--------------------------------------------------------------------");
                 Console.WriteLine("DEMO: Usage of 'NextAsPOCO<T>' with GraphCommand and GraphTraversal ");
                 Console.WriteLine("--------------------------------------------------------------------");
@@ -161,6 +166,7 @@ namespace Demo
                         Console.WriteLine($"JSON ==> {docDBJson}");
                     }
                 }
+                #endregion
             }
             catch (Exception ex)
             {

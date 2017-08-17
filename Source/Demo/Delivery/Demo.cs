@@ -46,7 +46,11 @@ namespace Demo.Delivery
                 Console.WriteLine(result.GetType().Name);
             }
 
-
+            #region EXPERIMENTAL DEMO
+            /// =================================================================================================
+            /// IMPORTANT: The following code makes use of the internal GraphTraversal class, which should not
+            /// be used according to the documentation of Microsofts Graph Library. Use at your own risk.
+            /// =================================================================================================
             var graphConnection =  GraphConnectionFactory.Create(client, collection);
             GraphCommand cmd = GraphCommandFactory.Create(graphConnection);
             partialGraph.Drop();
@@ -59,6 +63,7 @@ namespace Demo.Delivery
                     Console.WriteLine($"Vertex ==> Label:{p.Label} Name:{p.FirstName}");
                 }
             }
+            #endregion
         }
     }
 }
