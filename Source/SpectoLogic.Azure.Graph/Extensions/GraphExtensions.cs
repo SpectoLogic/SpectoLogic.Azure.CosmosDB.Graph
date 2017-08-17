@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SpectoLogic.Azure.Graph.Serializer;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -44,31 +45,47 @@ namespace SpectoLogic.Azure.Graph.Extensions
         /// <param name="trav">Extension Object GraphTraversal</param>
         /// <param name="context">Context that can store GraphElements. If you retrieved vertices and then an edge refering to those vertices they will be automatically linked.</param>
         /// <returns></returns>
-        public static async Task<IList<T>> NextAsPOCO<T>(this GraphTraversal trav, IGraphContext context = null) where T : new()
+        public static async Task<IList<T>> NextAsPOCO<T>(this GraphTraversal trav, IGraphContext context = null) // where T : new()
         {
+            IGraphSerializer serializer = null;
             List<T> result = new List<T>();
             /// Verify if the OutputFormat of the GraphCommand was set to GraphSON!
             Type graphTraversalType = typeof(GraphTraversal);
+            Type targetType = typeof(T);
             FieldInfo outputFormatPropertyInfo = graphTraversalType.GetField("outputFormat", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             string outputFormat = outputFormatPropertyInfo.GetValue(trav).ToString();
             if (!outputFormat.StartsWith("GraphSON")) throw new Exception("OutputFormat of GraphCommand needs to be set to GRAPHSON!");
 
-            GraphSerializer<T> serializer = GraphSerializerFactory.CreateGraphSerializer<T>(context);
-            // If context is obmitted clear data from previous requests.
-            if (context == null) serializer.GraphContext.Drop();
+            // GraphSerializer<T> serializer = GraphSerializerFactory.CreateGraphSerializer<T>(context);
 
             // Edges and Vertices must be treated separately
-            if (serializer.IsEdge())
+            if (GraphSerializer.GetElementType(typeof(T))== GraphElementType.Edge)
             {
                 List<Edge> resultSet = await trav.NextAsModelAsync<Edge>();
                 foreach (Edge e in resultSet)
-                    result.Add(serializer.Convert(e));
+                {
+                    string typeString = GraphSerializer.GetTypePropertyString(e, out string inVTypeString, out string outVTypeString);
+                    if (String.IsNullOrEmpty(typeString))
+                        serializer = GraphSerializerFactory.CreateGraphSerializer(context, targetType); // Try to instantiate T
+                    else
+                        serializer = GraphSerializerFactory.CreateGraphSerializer(context, typeString);
+                    serializer.Convert(e, out object edge);
+                    result.Add((T)edge);
+                }
             }
             else
             {
                 List<Vertex> resultSet = await trav.NextAsModelAsync<Vertex>();
                 foreach (Vertex v in resultSet)
-                    result.Add(serializer.Convert(v));
+                {
+                    string typeString = GraphSerializer.GetTypePropertyString(v);
+                    if (String.IsNullOrEmpty(typeString))
+                        serializer = GraphSerializerFactory.CreateGraphSerializer(context, targetType); // Try to instantiate T
+                    else
+                        serializer = GraphSerializerFactory.CreateGraphSerializer(context, typeString);
+                    serializer.Convert(v, out object vertex);
+                    result.Add((T)vertex);
+                }
                 //Alternative implementation TODO: Measure speed
                 //==========================
                 //foreach (var graphSON in trav)
@@ -89,26 +106,41 @@ namespace SpectoLogic.Azure.Graph.Extensions
         /// <param name="gremlinQuery">ExtensionObject IDocumentQuery</param>
         /// <param name="context">Context that can store GraphElements. If you retrieved vertices and then an edge refering to those vertices they will be automatically linked.</param>
         /// <returns></returns>
-        public static async Task<IList<T>> ExecuteNextAsyncAsPOCO<T>(this IDocumentQuery gremlinQuery, IGraphContext context = null) where T : new()
+        public static async Task<IList<T>> ExecuteNextAsyncAsPOCO<T>(this IDocumentQuery gremlinQuery, IGraphContext context = null) // where T : new()
         {
             List<T> result = new List<T>();
+            IGraphSerializer serializer = null;
+            Type targetType = typeof(T);
 
-            GraphSerializer<T> serializer = GraphSerializerFactory.CreateGraphSerializer<T>(context);
-            // If context is obmitted clear data from previous requests.
-            if (context == null) serializer.GraphContext.Drop();
-            if (serializer.IsEdge())
+            if (gremlinQuery.GetType().GenericTypeArguments[0] != typeof(Vertex))
             {
                 IDocumentQuery<Edge> edgeQuery = gremlinQuery as IDocumentQuery<Edge>;
                 var resultSet = await edgeQuery.ExecuteNextAsync<Edge>();
                 foreach (Edge e in resultSet)
-                    result.Add(serializer.Convert(e));
+                {
+                    string typeString = GraphSerializer.GetTypePropertyString(e, out string inVTypeString, out string outVTypeString);
+                    if (String.IsNullOrEmpty(typeString))
+                        serializer = GraphSerializerFactory.CreateGraphSerializer(context, targetType); // Try to instantiate T
+                    else
+                        serializer = GraphSerializerFactory.CreateGraphSerializer(context, typeString);
+                    serializer.Convert(e, out object edge);
+                    result.Add((T)edge);
+                }
             }
             else
             {
                 IDocumentQuery<Vertex> vertexQuery = gremlinQuery as IDocumentQuery<Vertex>;
                 var resultSet = await vertexQuery.ExecuteNextAsync<Vertex>();
                 foreach (Vertex v in resultSet)
-                    result.Add(serializer.Convert(v));
+                {
+                    string typeString = GraphSerializer.GetTypePropertyString(v);
+                    if (String.IsNullOrEmpty(typeString))
+                        serializer = GraphSerializerFactory.CreateGraphSerializer(context, targetType); // Try to instantiate T
+                    else
+                        serializer = GraphSerializerFactory.CreateGraphSerializer(context, typeString);
+                    serializer.Convert(v, out object vertex);
+                    result.Add((T)vertex);
+                }
             }
             return result;
         }
@@ -127,7 +159,7 @@ namespace SpectoLogic.Azure.Graph.Extensions
         }
         public static async Task<ResourceResponse<Document>> CreateGraphDocumentAsync<T>(this DocumentClient client, DocumentCollection collection, T poco) where T : new()
         {
-            GraphSerializer<T> serializer = GraphSerializerFactory.CreateGraphSerializer<T>();
+            IGraphSerializer<T> serializer = GraphSerializerFactory.CreateGraphSerializer<T>();
             return await client.CreateDocumentAsync(collection.SelfLink, serializer.ConvertToDocDBJObject(poco));
         }
 
@@ -147,6 +179,15 @@ namespace SpectoLogic.Azure.Graph.Extensions
             }
             return results;
         }
-
+        public static async Task<List<ResourceResponse<Document>>> UpsertGraphDocumentsAsync(this DocumentClient client, DocumentCollection collection, IEnumerable items)
+        {
+            List<ResourceResponse<Document>> results = new List<ResourceResponse<Document>>();
+            foreach (object poco in items)
+            {
+                IGraphSerializer serializer = GraphSerializerFactory.CreateGraphSerializer(null, poco.GetType());
+                results.Add(await client.UpsertDocumentAsync(collection.SelfLink, serializer.ConvertToDocDBJObject(poco)));
+            }
+            return results;
+        }
     }
 }

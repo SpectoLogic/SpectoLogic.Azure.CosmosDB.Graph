@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+VisualStudioVersion = 15.0.26730.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpectoLogic.Azure.Graph", "SpectoLogic.Azure.Graph\SpectoLogic.Azure.Graph.csproj", "{232B8E66-F52C-4922-BFD2-4439E06B7A78}"
 EndProject
@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpectoLogic.Azure.CosmosDB"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{C6C568F1-D460-425A-A9D7-3C353CB1B664}"
 	ProjectSection(SolutionItems) = preProject
+		..\Diagram-Interfaces.JPG = ..\Diagram-Interfaces.JPG
+		..\Diagram-VerticesEdges.JPG = ..\Diagram-VerticesEdges.JPG
 		..\LICENSE = ..\LICENSE
 		..\README.md = ..\README.md
 	EndProjectSection
@@ -36,5 +38,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {918B1D66-04D9-4751-8C8C-052F57C8C813}
 	EndGlobalSection
 EndGlobal

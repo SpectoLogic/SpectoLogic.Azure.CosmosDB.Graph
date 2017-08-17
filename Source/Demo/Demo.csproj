@@ -83,10 +83,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Delivery\Delivers.cs" />
+    <Compile Include="Delivery\DeliveryByCar.cs" />
+    <Compile Include="Delivery\DeliveryByTrain.cs" />
     <Compile Include="Delivery\Demo.cs" />
-    <Compile Include="Delivery\IDemoVertex.cs" />
-    <Compile Include="Delivery\IDemoEdge.cs" />
+    <Compile Include="Delivery\IEndpointVertex.cs" />
+    <Compile Include="Delivery\IDeliveryEdge.cs" />
     <Compile Include="Delivery\Person.cs" />
     <Compile Include="Delivery\Place.cs" />
     <Compile Include="Simple\Path.cs" />
@@ -99,6 +100,7 @@
     <None Include="AppSettingsSecrets.config">
       <SubType>Designer</SubType>
     </None>
+    <None Include="Delivery\DeliverySampleArchitecture.cd" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

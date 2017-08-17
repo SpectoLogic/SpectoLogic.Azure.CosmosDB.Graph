@@ -13,70 +13,72 @@ using System.Threading.Tasks;
 
 namespace SpectoLogic.Azure.Graph.Serializer
 {
-    public class GraphSerializer<T, TIn, TOut> : IGraphSerializer where T : new()
+    internal class GraphSerializer
     {
-        public void AddDefinedPropertyListItem(GraphDefinedPropertyType propertyType, object targetInstance, object value)
+        internal static string GetTypeKey(Type targetType)
         {
-            throw new NotImplementedException();
+            return targetType.Assembly.FullName + "|" + targetType.FullName;
         }
-
-        public JObject ConvertToDocDBJObject(object poco)
+        internal static string GetTypePropertyString(Edge e, out string invTypeString, out string outvTypeString)
         {
-            throw new NotImplementedException();
+            Property _type = null;
+            Property _inType = null;
+            Property _outType = null;
+
+            // Would be great if one could test if this property was there
+            try { _type = e.GetProperty("_type"); } catch (Exception) { }
+            try { _inType = e.GetProperty("_typeIn"); } catch (Exception) { }
+            try { _outType = e.GetProperty("_typeOut"); } catch (Exception) { }
+            if (_inType != null) invTypeString = _inType.Value.ToString(); else invTypeString = String.Empty;
+            if (_outType != null) outvTypeString = _outType.Value.ToString(); else outvTypeString = String.Empty;
+
+            if (_type == null) return String.Empty;
+            return _type.Value.ToString();
         }
-
-        public IGraphSerializer CreateGraphSerializerForItem(GraphDefinedPropertyType propertyType)
+        internal static string GetTypePropertyString(Vertex v)
         {
-            throw new NotImplementedException();
+            VertexProperty _type = null;
+            // Would be great if one could test if this property was there
+            try { _type = v.GetVertexProperties("_type").FirstOrDefault(); } catch (Exception) { }
+            if (_type == null) return String.Empty;
+            return _type.Value.ToString();
         }
-
-        public IGraphSerializer CreateGraphSerializerForListItem(GraphDefinedPropertyType propertyType)
+        /// <summary>
+        /// Try to detect if the Element is a Vertex or an Edge
+        /// If we are not provided with interfaces, we need to have an 
+        /// Type that has a default constructor, to use
+        /// GraphSerializerFactory to create a Serializer which knows about this.
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        internal static GraphElementType GetElementType(Type t)
         {
-            throw new NotImplementedException();
-        }
+            Type[] interfaces = t.GetInterfaces();
+            var vInterface = interfaces.Where(i => i.Name == typeof(IVertex<object, object>).Name).FirstOrDefault();
+            if (vInterface != null) return GraphElementType.Vertex;
+            var eInterface = interfaces.Where(i => i.Name == typeof(IEdge<object, object>).Name).FirstOrDefault();
+            if (eInterface != null) return GraphElementType.Edge;
 
-        public IGraphSerializer CreateGraphSerializerForType(Type itemType)
-        {
-            throw new NotImplementedException();
-        }
-
-        public object CreateItemInstanceObject(string id)
-        {
-            throw new NotImplementedException();
-        }
-
-        public object CreateListItemInstance(GraphDefinedPropertyType propertyType, string id)
-        {
-            throw new NotImplementedException();
-        }
-
-        public object GetCustomProperty(string propertyName, object targetInstance)
-        {
-            throw new NotImplementedException();
-        }
-
-        public object GetDefinedProperty(GraphDefinedPropertyType propertyType, object targetInstance)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool IsEdge()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool IsVertex()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetDefinedProperty(GraphDefinedPropertyType propertyType, object targetInstance, object value)
-        {
-            throw new NotImplementedException();
+            if (t.GetConstructor(Type.EmptyTypes) != null)
+            {
+                IGraphSerializer serializer = GraphSerializerFactory.CreateGraphSerializer(null, t);
+                if (serializer.IsEdge()) return GraphElementType.Edge; else return GraphElementType.Vertex;
+            }
+            throw new Exception("Could not determine element type!");
         }
     }
 
-    public class GraphSerializer<T> : IGraphSerializer where T : new()
+    /// <summary>
+    /// GraphSerializer converts instances of Edge/Vertex from Microsoft.Azure.Graph.Elements into plain C# objects of Type T.
+    /// GraphSerializer can also convert a JSON (Graphson Format) to vertices and edges. 
+    /// 
+    /// GraphSerializer also work with IGraphContex which can be a represenatation of a Graph Subset in Memory. Imagine quering
+    /// multiple vertices and then some related edges. Ideally you do not want to end up with independent vertices and edges but
+    /// with vertices and edges that reference each other accordingly. If you pass a IGraphContext the serializer will make sure
+    /// that already created instances are updates and references are kept.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    internal class GraphSerializer<T> : IGraphSerializer, IGraphSerializer<T> where T : new()
     {
         /// <summary>
         /// Contains the Reflection PropertyInfo of all defined Properties
@@ -96,43 +98,100 @@ namespace SpectoLogic.Azure.Graph.Serializer
         /// richer data availabilty and prevention of duplicated entries like Edges that contain only partial information although they have been retrieved earlier or later.
         /// </summary>
         IGraphContext myContext;
-        Type myTIn = null;     // Type of In-Vertex or In-Edge
-        Type myTOut = null;    // Type of Out-Vertex or Out-Edge
+        /// <summary>
+        /// Type of Edge/Vertex that reference to this GraphElement (Vertex/Edge)
+        /// If this Item is an Edge there is only one incomming vertex.
+        /// If this Item is a Vertex there can be multiple incomming edges
+        /// </summary>
+        public Type InType
+        {
+            get; private set;
+        }
+        /// <summary>
+        /// Type of Edge/Vertex that this GraphElement references to (Vertex/Edge)
+        /// If this Item is an Edge there is only one outgoing vertex.
+        /// If this Item is a Vertex there can be multiple outgoing edges
+        /// </summary>
+        public Type OutType
+        {
+            get; private set;
+        }
 
+        /// <summary>
+        /// Internal constructor to create a GraphSerializer for a graph element of type T
+        /// GraphSerializers are created with the GraphSerializerFactory
+        /// 
+        /// This constructor extracts all relevant information of the generic Type like the
+        /// implemented interfaces (IGraphElement,IVertex,IEdge), defined properties like (InE,OutE,...)
+        /// and types of incomming/outgoing vertices/edges.
+        /// 
+        /// Since only one graph serializers is created by type this only occurs once which should improve performance.
+        /// </summary>
+        /// <param name="context"></param>
         internal GraphSerializer(IGraphContext context)
         {
             myContext = context;
-            Type TType = typeof(T);
+            Type targetType = typeof(T);
 
-            Type[] interfaces = TType.GetInterfaces();
-            var vInterface = interfaces.Where(i => i.Name == "IVertex`2").FirstOrDefault();
-            var eInterface = interfaces.Where(i => i.Name == "IEdge`2").FirstOrDefault();
-            myClassAttribute = TType.GetCustomAttribute<GraphClassAttribute>();
+            Type[] interfaces = targetType.GetInterfaces(); // Retrieve all interfaces of the GraphElementType
+            // Find out if it implements IVertex<In,Out> or IEdge<In,Out> and store references to those interfaces
+            var vInterface = interfaces.Where(i => i.Name == typeof(IVertex<object, object>).Name).FirstOrDefault();
+            var eInterface = interfaces.Where(i => i.Name == typeof(IEdge<object, object>).Name).FirstOrDefault();
+            var geInterface = interfaces.Where(i => i.Name == typeof(IGraphElement).Name).FirstOrDefault();
+            // Evaluate if the GraphClassAttribute is set
+            myClassAttribute = targetType.GetCustomAttribute<GraphClassAttribute>();
+
+            if (geInterface != null)
+            {
+                PropertyInfo pi = geInterface.GetProperty("Id");
+                myPI_Defined.Add(GraphDefinedPropertyType.Id, pi);
+                pi = geInterface.GetProperty("Label");
+                myPI_Defined.Add(GraphDefinedPropertyType.Label, pi);
+                // Create a new class Attribute if there was none defined (is used to store info about the graph element type (Vertex or Edge))
+                if (myClassAttribute == null) myClassAttribute = new GraphClassAttribute();
+            }
+
+            // If an interface has been defined we use that as reference if the GraphElement is an Vertex or Edge.
+            // Also we extract the type of the incomming/outgoing vertices/edges and store this in InType/OutType.
             if (vInterface != null)
             {
+                // Ensure consistency in case someone implements IVertex but declares the GraphElement as Edge
                 myClassAttribute.ElementType = GraphElementType.Vertex;
                 Type[] genericArgs = vInterface.GetGenericArguments();
-                myTIn = genericArgs[0];
-                myTOut = genericArgs[1];
+                InType = genericArgs[0];
+                OutType = genericArgs[1];
+
+                PropertyInfo pi = vInterface.GetProperty("InE");
+                myPI_Defined.Add(GraphDefinedPropertyType.InE, pi);
+                pi = vInterface.GetProperty("OutE");
+                myPI_Defined.Add(GraphDefinedPropertyType.OutE, pi);
             }
             if (eInterface != null)
             {
+                // Ensure consistency in case someone implements IEdge but declares the GraphElement as Vertex
                 myClassAttribute.ElementType = GraphElementType.Edge;
                 Type[] genericArgs = eInterface.GetGenericArguments();
-                myTIn = genericArgs[0];
-                myTOut = genericArgs[1];
+                InType = genericArgs[0];
+                OutType = genericArgs[1];
+
+                PropertyInfo pi = eInterface.GetProperty("InV");
+                myPI_Defined.Add(GraphDefinedPropertyType.InV, pi);
+                pi = eInterface.GetProperty("OutV");
+                myPI_Defined.Add(GraphDefinedPropertyType.OutV, pi);
             }
 
             #region Evaluate Properties 
-            PropertyInfo[] propertyInfos = TType.GetProperties();
+            PropertyInfo[] propertyInfos = targetType.GetProperties();
             foreach (PropertyInfo pi in propertyInfos)
             {
+                // Defined Properties can be decorated with the GraphProperty Attribute to clearly define its purpose
                 GraphPropertyAttribute gpa = pi.GetCustomAttribute<GraphPropertyAttribute>();
                 if ((gpa != null) && (gpa.DefinedProperty != GraphDefinedPropertyType.None))
                 {
                     #region Assign Defined Property to Member
                     if (myPI_Defined.ContainsKey(gpa.DefinedProperty))
-                    {
+                    {   // If we added a other property (found by name convention) earlier move the stored property
+                        // to the custom properties and replace it with this declared defined graph property.
                         myPI_Custom.Add(myPI_Defined[gpa.DefinedProperty].Name, myPI_Defined[gpa.DefinedProperty]); // If set before by name move to custom properties
                     }
                     myPI_Defined.Add(gpa.DefinedProperty, pi);
@@ -140,6 +199,7 @@ namespace SpectoLogic.Azure.Graph.Serializer
                 }
                 else
                 {
+                    // Detect Properties by name convention
                     GraphDefinedPropertyType detectedDefinedType = GraphDefinedPropertyType.Id;
                     bool definedDetected = true;
                     switch (pi.Name.ToLower())
@@ -157,8 +217,11 @@ namespace SpectoLogic.Azure.Graph.Serializer
                             }
                             break;
                     }
-                    if (definedDetected)
+                    // If an interface was defined ignore properties found by name convention as the interfaces adhere to those!
+                    if (definedDetected && vInterface==null && eInterface==null)
                     {
+                        // If we found a property by name convention ensure that no other defined property with the same purpose
+                        // was defined earlier. If so we assume that this property is a custom property.
                         if (!myPI_Defined.ContainsKey(detectedDefinedType))
                             myPI_Defined.Add(detectedDefinedType, pi);
                         else
@@ -168,29 +231,42 @@ namespace SpectoLogic.Azure.Graph.Serializer
             }
             #endregion
 
-            if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.InV))
-                myTIn = myPI_Defined[GraphDefinedPropertyType.InV].PropertyType;
-            if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.OutV))
-                myTOut = myPI_Defined[GraphDefinedPropertyType.OutV].PropertyType;
-            if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.InE))
-                myTIn = myPI_Defined[GraphDefinedPropertyType.InE].PropertyType.GenericTypeArguments[0]; // Must be a generic List
-            if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.OutE))
-                myTOut = myPI_Defined[GraphDefinedPropertyType.OutE].PropertyType.GenericTypeArguments[0]; // Must be a generic List
+            #region Ensure InType and OutType are defined (In case no interface was implemented)
+            if (InType == null)
+            {
+                if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.InV))
+                    InType = myPI_Defined[GraphDefinedPropertyType.InV].PropertyType;
+                if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.InE))
+                    InType = myPI_Defined[GraphDefinedPropertyType.InE].PropertyType.GenericTypeArguments[0]; // Must be a generic List
+            }
+            if (OutType == null)
+            {
+                if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.OutV))
+                    OutType = myPI_Defined[GraphDefinedPropertyType.OutV].PropertyType;
+                if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.OutE))
+                    OutType = myPI_Defined[GraphDefinedPropertyType.OutE].PropertyType.GenericTypeArguments[0]; // Must be a generic List
+            }
+            #endregion
 
-            #region Evaluate if given Type is Vertex or Edge
+            #region If not yet defined evaluate if given Type is Vertex or Edge
+            // If the classAttribute has not been defined yet (no Interface implemented and no ClassAttribute defined)
             if (myClassAttribute == null)
             {
-
                 if ((myPI_Defined.ContainsKey(GraphDefinedPropertyType.InV)) || (myPI_Defined.ContainsKey(GraphDefinedPropertyType.OutV)))
                     myClassAttribute = new GraphClassAttribute() { ElementType = GraphElementType.Edge };
                 else
                     myClassAttribute = new GraphClassAttribute() { ElementType = GraphElementType.Vertex };
             }
             #endregion
+
+            // Store the type information in the internal classattribute
             if (myClassAttribute.TypeKey==null)
-                myClassAttribute.TypeKey = TType.Assembly.FullName + "|" + TType.FullName;
+                myClassAttribute.TypeKey = GraphSerializer.GetTypeKey(targetType);
         }
 
+        /// <summary>
+        /// returns a reference to the GraphContext which can store a partial graph
+        /// </summary>
         public IGraphContext GraphContext
         {
             get
@@ -198,13 +274,28 @@ namespace SpectoLogic.Azure.Graph.Serializer
                 return myContext;
             }
         }
-
+        
+        // Defined Properties are Id, Label, InE, OutE, InV, OutV
         #region Helpers to work with defined properties
+
+        /// <summary>
+        /// Sets the value of a defined property of an target instance. 
+        /// OutE and InE are always Lists as one Vertex can refer to multiple edges.
+        /// </summary>
+        /// <param name="propertyType">the property that should be set: Id, Label, InV, InE, OutE, InE</param>
+        /// <param name="targetInstance">target instance which property should be set</param>
+        /// <param name="value">the value that should be set</param>
         public void SetDefinedProperty(GraphDefinedPropertyType propertyType, object targetInstance, object value)
         {
             if (myPI_Defined.ContainsKey(propertyType))
                 myPI_Defined[propertyType].SetValue(targetInstance, value);
         }
+        /// <summary>
+        /// Retrieves a value from a defined property (like Id,Label,...) from a target instance
+        /// </summary>
+        /// <param name="propertyType"></param>
+        /// <param name="targetInstance"></param>
+        /// <returns></returns>
         public object GetDefinedProperty(GraphDefinedPropertyType propertyType, object targetInstance)
         {
             if (myPI_Defined.ContainsKey(propertyType))
@@ -212,6 +303,14 @@ namespace SpectoLogic.Azure.Graph.Serializer
             else
                 return null;
         }
+        /// <summary>
+        /// In case the defined property is a List<> this method can be used to add an item to this list.
+        /// If the List<> is not yet instantiated it is created!
+        /// If the item is already part of the list it is NOT added again!
+        /// </summary>
+        /// <param name="propertyType"></param>
+        /// <param name="targetInstance"></param>
+        /// <param name="value"></param>
         public void AddDefinedPropertyListItem(GraphDefinedPropertyType propertyType, object targetInstance, object value)
         {
             IList targetList = myPI_Defined[propertyType].GetValue(targetInstance) as IList;
@@ -225,11 +324,23 @@ namespace SpectoLogic.Azure.Graph.Serializer
         #endregion
 
         #region Helpers to work with custom properties
+        /// <summary>
+        /// Sets any other property (other than defined) on the target instance
+        /// </summary>
+        /// <param name="propertyName"></param>
+        /// <param name="targetInstance"></param>
+        /// <param name="value"></param>
         public void SetCustomProperty(string propertyName, object targetInstance, object value)
         {
             if (myPI_Custom.ContainsKey(propertyName))
                 myPI_Custom[propertyName].SetValue(targetInstance, value);
         }
+        /// <summary>
+        /// Gets any other property (other than defined) from the target instance
+        /// </summary>
+        /// <param name="propertyName"></param>
+        /// <param name="targetInstance"></param>
+        /// <returns></returns>
         public object GetCustomProperty(string propertyName, object targetInstance)
         {
             if (myPI_Custom.ContainsKey(propertyName))
@@ -237,6 +348,14 @@ namespace SpectoLogic.Azure.Graph.Serializer
             else
                 return null;
         }
+        /// <summary>
+        /// If the graph elements want to store additional meta information instead of simple data types
+        /// they can use the GraphProperty-Type. 
+        /// This method returns a reference to such graph property. If it was not set it is created!
+        /// </summary>
+        /// <param name="propertyName"></param>
+        /// <param name="targetInstance"></param>
+        /// <returns></returns>
         private GraphProperty GetOrCreateGraphProperty(string propertyName, object targetInstance)
         {
             GraphProperty graphProp = null;
@@ -251,6 +370,13 @@ namespace SpectoLogic.Azure.Graph.Serializer
             graphProp.Name = propertyName;
             return graphProp;
         }
+        /// <summary>
+        /// This method is used to transfer the information of a CosmosDB-VertexProperty object into
+        /// a GraphProperty instance.
+        /// </summary>
+        /// <param name="propertyName"></param>
+        /// <param name="targetInstance"></param>
+        /// <param name="value"></param>
         public void SetCustomVertexProperty(string propertyName, object targetInstance, VertexProperty value)
         {
             if (myPI_Custom.ContainsKey(propertyName))
@@ -271,6 +397,13 @@ namespace SpectoLogic.Azure.Graph.Serializer
                     myPI_Custom[propertyName].SetValue(targetInstance, value.Value);
             }
         }
+        /// <summary>
+        /// This method is used to transfer the information of a CosmosDB-EdgeProperty object into
+        /// a GraphProperty instance.
+        /// </summary>
+        /// <param name="propertyName"></param>
+        /// <param name="targetInstance"></param>
+        /// <param name="value"></param>
         public void SetCustomEdgeProperty(string propertyName, object targetInstance, Microsoft.Azure.Graphs.Elements.Property value)
         {
             if (myPI_Custom.ContainsKey(propertyName))
@@ -298,6 +431,10 @@ namespace SpectoLogic.Azure.Graph.Serializer
             return !IsEdge();
         }
 
+        /// <summary>
+        /// States if the Type from GraphElements should be stored as additional meta information in CosmosDB
+        /// </summary>
+        /// <returns></returns>
         public bool IsSerializeTypeInformation()
         {
             return myClassAttribute.SerializeTypeInformation;
@@ -319,13 +456,13 @@ namespace SpectoLogic.Azure.Graph.Serializer
             {
                 List<Vertex> vertices = JsonConvert.DeserializeObject<List<Vertex>>(graphSON, converter);
                 foreach (Vertex v in vertices)
-                    result.Add(this.Convert(v));
+                    result.Add((T)this.Convert(v));
             }
             else
             {
                 List<Edge> edges = JsonConvert.DeserializeObject<List<Edge>>(graphSON, converter);
                 foreach (Edge e in edges)
-                    result.Add(this.Convert(e));
+                    result.Add((T)this.Convert(e));
             }
             return result;
         }
@@ -386,12 +523,12 @@ namespace SpectoLogic.Azure.Graph.Serializer
             else
             {
                 object outV = this.GetDefinedProperty(GraphDefinedPropertyType.OutV, poco);
-                IGraphSerializer outVSerial = outV != null ? CreateGraphSerializerForType(outV.GetType()) : null;
+                IGraphSerializer outVSerial = outV != null ? GraphSerializerFactory.CreateGraphSerializer(myContext, outV.GetType()) : null;
 
                 object inV = this.GetDefinedProperty(GraphDefinedPropertyType.InV, poco);
-                IGraphSerializer inVSerial = inV != null ? CreateGraphSerializerForType(inV.GetType()) : null;
+                IGraphSerializer inVSerial = inV != null ? GraphSerializerFactory.CreateGraphSerializer(myContext,inV.GetType()) : null;
 
-                jOutput.Add(new JProperty("_isEdge", "true"));
+                jOutput.Add(new JProperty("_isEdge", true)); // Change from 2.2 to 2.4 --> in 2.2 it was required to store it as string!
                 if (inVSerial != null)
                 {
                     jOutput.Add(new JProperty("_sink", inVSerial.GetDefinedProperty(GraphDefinedPropertyType.Id, inV)));
@@ -404,7 +541,11 @@ namespace SpectoLogic.Azure.Graph.Serializer
                 }
 
                 if (this.IsSerializeTypeInformation())
+                {
                     jOutput.Add(new JProperty("_type", myClassAttribute.TypeKey));
+                    jOutput.Add(new JProperty("_typeIn", GraphSerializer.GetTypeKey(inV.GetType())));
+                    jOutput.Add(new JProperty("_typeOut", GraphSerializer.GetTypeKey(outV.GetType())));
+                }
 
                 foreach (KeyValuePair<string, PropertyInfo> cp in this.myPI_Custom)
                 {
@@ -437,7 +578,7 @@ namespace SpectoLogic.Azure.Graph.Serializer
         public T Convert(Vertex v)
         {
             // Creates or fetches Vertex
-            T resultVertex = CreateItemInstance(v.Id.ToString());
+            object resultVertex = CreateItemInstance(v.Id.ToString());
             // Propulate lable and custom properties
             this.SetDefinedProperty(GraphDefinedPropertyType.Label, resultVertex, v.Label);
             foreach (var vp in v.GetVertexProperties())
@@ -447,17 +588,28 @@ namespace SpectoLogic.Azure.Graph.Serializer
             {
                 foreach (var ve in v.GetInEdges())
                 {
-                    // Create or fetch the In-Edge 
-                    IGraphSerializer inEdgeSerializer = CreateGraphSerializerForListItem(GraphDefinedPropertyType.InE);
-                    object edge = CreateListItemInstance(GraphDefinedPropertyType.InE, ve.Id.ToString());
-                    // Populate Label of In-Edge and set the In-Vertex of the Edge to the resultVertex
+                    IGraphSerializer inEdgeSerializer = null;
+                    string typeString = GraphSerializer.GetTypePropertyString(ve, out string inVTypeString, out string outVTypeString);
+                    object edge = null;
+
+                    if (String.IsNullOrEmpty(typeString))
+                        inEdgeSerializer = GraphSerializerFactory.CreateGraphSerializer(myContext, this.InType);
+                    else
+                        inEdgeSerializer = GraphSerializerFactory.CreateGraphSerializer(myContext, typeString);
+                    edge = inEdgeSerializer.CreateItemInstanceObject(ve.Id.ToString());
                     inEdgeSerializer.SetDefinedProperty(GraphDefinedPropertyType.Label, edge, ve.Label);
                     inEdgeSerializer.SetDefinedProperty(GraphDefinedPropertyType.InV, edge, resultVertex); // InV is the result
 
-                    // ve also contains the id of the OutVertex
-                    // Create or fetch the Out-Vertex
-                    IGraphSerializer vertexSerializer = inEdgeSerializer.CreateGraphSerializerForItem(GraphDefinedPropertyType.OutV);
-                    object outvertex = vertexSerializer.CreateItemInstanceObject(ve.OutVertexId.ToString()); // TODO: Why is this an object?
+
+                    IGraphSerializer vertexSerializer = null;
+                    object outvertex = null;
+
+                    if (String.IsNullOrEmpty(outVTypeString))
+                        vertexSerializer = GraphSerializerFactory.CreateGraphSerializer(myContext, typeof(T));
+                    else
+                        vertexSerializer = GraphSerializerFactory.CreateGraphSerializer(myContext, outVTypeString);
+
+                    outvertex = vertexSerializer.CreateItemInstanceObject(ve.OutVertexId.ToString()); 
                     // Make sure the Out-Edge of the Vertex is set to the Edge
                     vertexSerializer.AddDefinedPropertyListItem(GraphDefinedPropertyType.OutE, outvertex, edge);
                     // Set the OutV property of the edge with the just fetched OutV
@@ -471,21 +623,35 @@ namespace SpectoLogic.Azure.Graph.Serializer
             {
                 foreach (var ve in v.GetOutEdges())
                 {
+                    IGraphSerializer outEdgeSerializer = null;
+                    string typeString = GraphSerializer.GetTypePropertyString(ve, out string inVTypeString, out string outVTypeString);
+                    object edge = null;
 
-                    IGraphSerializer serializer = CreateGraphSerializerForListItem(GraphDefinedPropertyType.OutE);
-                    object edge = CreateListItemInstance(GraphDefinedPropertyType.OutE, ve.Id.ToString()); // TODO: Why is this an object?
-                    serializer.SetDefinedProperty(GraphDefinedPropertyType.Label, edge, ve.Label);
-                    serializer.SetDefinedProperty(GraphDefinedPropertyType.OutV, edge, resultVertex); // outV is the result
+                    if (String.IsNullOrEmpty(typeString))
+                        outEdgeSerializer = GraphSerializerFactory.CreateGraphSerializer(myContext, this.OutType);
+                    else
+                        outEdgeSerializer = GraphSerializerFactory.CreateGraphSerializer(myContext, typeString);
+                    edge = outEdgeSerializer.CreateItemInstanceObject(ve.Id.ToString());
+                    outEdgeSerializer.SetDefinedProperty(GraphDefinedPropertyType.Label, edge, ve.Label);
+                    outEdgeSerializer.SetDefinedProperty(GraphDefinedPropertyType.OutV, edge, resultVertex); // outV is the result
 
-                    IGraphSerializer vertexSerializer = serializer.CreateGraphSerializerForItem(GraphDefinedPropertyType.InV);
-                    object inVertex = vertexSerializer.CreateItemInstanceObject(ve.InVertexId.ToString());// TODO: Why is this an object?
+                    IGraphSerializer vertexSerializer = null;
+                    object inVertex = null;
+
+                    if (String.IsNullOrEmpty(inVTypeString))
+                        vertexSerializer = GraphSerializerFactory.CreateGraphSerializer(myContext, typeof(T)); // typeof (T) instead?
+                    else
+                        vertexSerializer = GraphSerializerFactory.CreateGraphSerializer(myContext, inVTypeString);
+
+                    inVertex = vertexSerializer.CreateItemInstanceObject(ve.InVertexId.ToString());
+
                     vertexSerializer.AddDefinedPropertyListItem(GraphDefinedPropertyType.InE, inVertex, edge);
-                    serializer.SetDefinedProperty(GraphDefinedPropertyType.InV, edge, inVertex); // OUTV we just created
+                    outEdgeSerializer.SetDefinedProperty(GraphDefinedPropertyType.InV, edge, inVertex); // OUTV we just created
 
                     this.AddDefinedPropertyListItem(GraphDefinedPropertyType.OutE, resultVertex, edge);
                 }
             }
-            return resultVertex;
+            return (T)resultVertex;
         }
 
         /// <summary>
@@ -496,65 +662,62 @@ namespace SpectoLogic.Azure.Graph.Serializer
         public T Convert(Edge e)
         {
             /// Create or fetch the Edge Instance
-            T resultEdge = CreateItemInstance(e.Id.ToString());
+            object resultEdge = CreateItemInstance(e.Id.ToString());
             /// (Re)populate Lable and custom properties
             this.SetDefinedProperty(GraphDefinedPropertyType.Label, resultEdge, e.Label);
             foreach (var ep in e.GetProperties())
                 SetCustomEdgeProperty(ep.Key, resultEdge, ep);
 
+            string typeString = GraphSerializer.GetTypePropertyString(e, out string inVTypeString, out string outVTypeString);
+
             if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.InV))
             {
+                IGraphSerializer serializer = null;
+                object inVertex = null;
+
+                if (String.IsNullOrEmpty(inVTypeString))
+                    serializer = GraphSerializerFactory.CreateGraphSerializer(myContext, this.InType);
+                else
+                    serializer = GraphSerializerFactory.CreateGraphSerializer(myContext, inVTypeString);
+
                 /// Try to create/fetch the referenced In-Vertex
-                IGraphSerializer serializer = CreateGraphSerializerForItem(GraphDefinedPropertyType.InV);
-                object inVertex = serializer.CreateItemInstanceObject(e.InVertexId.ToString()); // TODO: Why is this an object?
+                inVertex = serializer.CreateItemInstanceObject(e.InVertexId.ToString()); 
+                
                 serializer.SetDefinedProperty(GraphDefinedPropertyType.Label, inVertex, e.InVertexLabel);
                 serializer.AddDefinedPropertyListItem(GraphDefinedPropertyType.InE, inVertex, resultEdge);
+                
                 /// Set the created In-Vertex as InV-Property
                 this.SetDefinedProperty(GraphDefinedPropertyType.InV, resultEdge, inVertex);
             }
             if (myPI_Defined.ContainsKey(GraphDefinedPropertyType.OutV))
             {
-                /// Try to create/fetch the referenced Out-Vertex
-                IGraphSerializer serializer = CreateGraphSerializerForItem(GraphDefinedPropertyType.OutV);
-                object outVertex = serializer.CreateItemInstanceObject(e.OutVertexId.ToString()); // TODO: Why is this an object?
+                IGraphSerializer serializer = null;
+                object outVertex = null;
+
+                if (String.IsNullOrEmpty(outVTypeString))
+                    serializer = GraphSerializerFactory.CreateGraphSerializer(myContext, this.OutType);
+                else
+                    serializer = GraphSerializerFactory.CreateGraphSerializer(myContext, outVTypeString);
+
+                // Try to create/fetch the referenced Out-Vertex
+                outVertex = serializer.CreateItemInstanceObject(e.OutVertexId.ToString());
+
                 serializer.SetDefinedProperty(GraphDefinedPropertyType.Label, outVertex, e.OutVertexLabel);
                 serializer.AddDefinedPropertyListItem(GraphDefinedPropertyType.OutE, outVertex, resultEdge);
+                
                 /// Set the created Out-Vertex as OutV-Property
                 this.SetDefinedProperty(GraphDefinedPropertyType.OutV, resultEdge, outVertex);
             }
-            return resultEdge;
+            return (T)resultEdge;
         }
 
-        /// <summary>
-        /// Identifies the type T of a List<T> property and creates an instance
-        /// of T, sets the defined property id, if the instance is not found
-        /// in the GraphContext. Otherwise it is fetched from the GraphContext.
-        /// </summary>
-        /// <param name="propertyInfo"></param>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        private object CreateListItemInstance(PropertyInfo propertyInfo, string id)
+        public void Convert(Vertex v, out object result)
         {
-            if (myContext[id] != null) return myContext[id];
-            Type listElementType = propertyInfo.PropertyType.GenericTypeArguments[0];
-            object item = Activator.CreateInstance(listElementType); // Create Edge
-            myContext[id] = item;
-
-            IGraphSerializer serializer = CreateGraphSerializerForListItem(listElementType);
-            serializer.SetDefinedProperty(GraphDefinedPropertyType.Id, item, id);
-
-            return item;
+            result = Convert(v);
         }
-
-        /// <summary>
-        /// Shortcut for defined Properties of "object CreateListItemInstance(PropertyInfo propertyInfo, string id)"
-        /// </summary>
-        /// <param name="propertyInfo"></param>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public object CreateListItemInstance(GraphDefinedPropertyType propertyInfo, string id)
+        public void Convert(Edge e, out object result)
         {
-            return CreateListItemInstance(myPI_Defined[propertyInfo], id);
+            result = Convert(e);
         }
 
         /// <summary>
@@ -563,14 +726,35 @@ namespace SpectoLogic.Azure.Graph.Serializer
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        private T CreateItemInstance(string id)
+        private object CreateItemInstance(string id)
         {
-            if (myContext[id] != null) return (T)myContext[id];
+            object tmpGraphItem = myContext[id];
+            if (tmpGraphItem != null)
+            {
+                return myContext[id];
+            }
             T instance = new T();
             this.SetDefinedProperty(GraphDefinedPropertyType.Id, instance, id);
             myContext[id] = instance;
             return instance;
         }
+
+        public object CreateItemInstance(IGraphContext context, string id, out IGraphSerializer serializer)
+        {
+            object tmpGraphItem = context[id];
+            if (tmpGraphItem != null)
+            {
+                serializer = GraphSerializerFactory.CreateGraphSerializer(context, tmpGraphItem.GetType());
+                return tmpGraphItem;
+            }
+            T instance = new T();
+            serializer = GraphSerializerFactory.CreateGraphSerializer(context,typeof(T));
+            serializer.SetDefinedProperty(GraphDefinedPropertyType.Id, instance, id);
+         
+            context[id] = instance;
+            return instance;
+        }
+
 
         /// <summary>
         /// Untyped version of T CreateItemInstance(string id) to satisfy Interface
@@ -608,38 +792,25 @@ namespace SpectoLogic.Azure.Graph.Serializer
             return list;
         }
 
-        /// <summary>
-        /// Detects the type of an ListItem of a defined property (InE or OutE) and creates a GraphSerializer for that
-        /// </summary>
-        /// <param name="propertyType"></param>
-        /// <returns></returns>
-        public IGraphSerializer CreateGraphSerializerForListItem(GraphDefinedPropertyType propertyType)
-        {
-            Type listElementType = myPI_Defined[propertyType].PropertyType.GenericTypeArguments[0];
-            return GraphSerializerFactory.CreateGraphSerializer(myContext, listElementType);
-        }
-        /// <summary>
-        /// Detects the type of the defined property (OutV or InV) and creates a GraphSerializer object
-        /// </summary>
-        /// <param name="propertyType"></param>
-        /// <returns></returns>
-        public IGraphSerializer CreateGraphSerializerForItem(GraphDefinedPropertyType propertyType)
-        {
-            Type itemType = myPI_Defined[propertyType].PropertyType;
-            return GraphSerializerFactory.CreateGraphSerializer(myContext, itemType);
-        }
-        /// <summary>
-        /// Helper to create a GraphSerializer for a specific type passing the local GraphContext
-        /// </summary>
-        /// <param name="propertyType"></param>
-        /// <returns></returns>
-        public IGraphSerializer CreateGraphSerializerForListItem(Type propertyType)
-        {
-            return GraphSerializerFactory.CreateGraphSerializer(myContext, propertyType);
-        }
-        public IGraphSerializer CreateGraphSerializerForType(Type itemType)
-        {
-            return GraphSerializerFactory.CreateGraphSerializer(myContext, itemType);
-        }
+        ///// <summary>
+        ///// Detects the type of an ListItem of a defined property (InE or OutE) and creates a GraphSerializer for that
+        ///// </summary>
+        ///// <param name="propertyType"></param>
+        ///// <returns></returns>
+        //public IGraphSerializer CreateGraphSerializerForListItem(GraphDefinedPropertyType propertyType)
+        //{
+        //    Type listElementType = myPI_Defined[propertyType].PropertyType.GenericTypeArguments[0];
+        //    return GraphSerializerFactory.CreateGraphSerializer(myContext, listElementType);
+        //}
+        ///// <summary>
+        ///// Detects the type of the defined property (OutV or InV) and creates a GraphSerializer object
+        ///// </summary>
+        ///// <param name="propertyType"></param>
+        ///// <returns></returns>
+        //public IGraphSerializer CreateGraphSerializerForItem(GraphDefinedPropertyType propertyType)
+        //{
+        //    Type itemType = myPI_Defined[propertyType].PropertyType;
+        //    return GraphSerializerFactory.CreateGraphSerializer(myContext, itemType);
+        //}
     }
 }

@@ -2,6 +2,15 @@
 
 namespace SpectoLogic.Azure.Graph
 {
+    public interface IEdge : IGraphElement
+    {
+        [JsonIgnore]
+        object InV { get; set; }
+
+        [JsonIgnore]
+        object OutV { get; set; }
+    }
+
     public interface IEdge<InVertex, OutVertex> : IGraphElement 
     {
         [JsonIgnore]

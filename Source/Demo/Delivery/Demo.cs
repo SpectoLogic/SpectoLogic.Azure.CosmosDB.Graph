@@ -1,12 +1,10 @@
 ﻿using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure.Graphs;
+using Microsoft.Azure.Graphs.Elements;
 using SpectoLogic.Azure.Graph;
 using SpectoLogic.Azure.Graph.Extensions;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Demo.Delivery
@@ -21,34 +19,46 @@ namespace Demo.Delivery
             Person tina = new Person() { FirstName="Tina",LastName="Pollak" };
             Place vienna = new Place() { name = "Vienna" };
             Place venice = new Place() { name = "Venice" };
-
-            // Add some vertices
+            // Add EndPoints
             context.Add(andreas,tina,vienna,venice);
 
-            Delivers andreasTotina = new Delivers(andreas, tina, 1);
-            Delivers andreasToVienna = new Delivers(andreas, vienna, 1);
-            Delivers andreasToVenice = new Delivers(andreas, venice, 5);
-            // Add paths
-            context.Add(andreasTotina, andreasToVienna, andreasToVenice);
+            DeliveryByCar andreasTotina = new DeliveryByCar(andreas, tina, 1);
+            DeliveryByCar andreasToVienna = new DeliveryByCar(andreas, vienna, 1);
+            DeliveryByCar andreasToVenice = new DeliveryByCar(andreas, venice, 5);
+            DeliveryByTrain andreasToVeniceByTrain = new DeliveryByTrain(andreas, venice, 3, "TR0012");
+            DeliveryByTrain tinaToViennaByTrain = new DeliveryByTrain(tina, vienna, 2, "TR0042");
+            // Add Paths/Edges
+            context.Add(andreasTotina, andreasToVienna, andreasToVenice, andreasToVeniceByTrain, tinaToViennaByTrain);
 
             await client.UpsertGraphDocumentsAsync(collection, context);
 
             MemoryGraph partialGraph = new MemoryGraph();
-            object graphConnection =  GraphConnectionFactory.Create(client, collection);
-            Microsoft.Azure.Graphs.GraphCommand cmd = GraphCommandFactory.Create(graphConnection);
-            cmd.SetOutputFormat(OutputFormat.GraphSON); // This is necessary in order to be able to call "NextAsPOCO"
 
-            GraphTraversal verticesTrav = cmd.g().V(); 
-            GraphTraversal edgeTrav = cmd.g().E().HasLabel("delivers");
+            /// Try both queries in both directions first vertices then edges then edges and vertices
+            var query = client.CreateGremlinQuery<Vertex>(collection, "g.V()");
+            foreach (var result in await query.ExecuteNextAsyncAsPOCO<IEndpointVertex>(partialGraph))
+            {
+                Console.WriteLine(result.GetType().Name);
+            }
+            var edgeQuery = client.CreateGremlinQuery<Edge>(collection, "g.E()");
+            foreach (var result in await edgeQuery.ExecuteNextAsyncAsPOCO<IDeliveryEdge>(partialGraph))
+            {
+                Console.WriteLine(result.GetType().Name);
+            }
 
-            //var vertices = await verticesTrav.NextAsPOCO<IDemoVertex>(partialGraph);
-            //foreach (IDemoVertex v in vertices)
-            //{
-            //    Console.WriteLine($"Vertex ==> Label:{v.Label} Name:{v.Id}");
-            //}
 
+            var graphConnection =  GraphConnectionFactory.Create(client, collection);
+            GraphCommand cmd = GraphCommandFactory.Create(graphConnection);
+            partialGraph.Drop();
 
-
+            GraphTraversal personTrav = cmd.g().V().HasLabel("Person");
+            {
+                var persons = await personTrav.NextAsPOCO<IEndpointVertex>(partialGraph);
+                foreach (Person p in persons)
+                {
+                    Console.WriteLine($"Vertex ==> Label:{p.Label} Name:{p.FirstName}");
+                }
+            }
         }
     }
 }

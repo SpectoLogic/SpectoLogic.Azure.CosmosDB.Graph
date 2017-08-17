@@ -65,10 +65,10 @@ namespace Demo
                 Console.WriteLine("---------------------------------------------------------");
                 Console.WriteLine("DEMO: Delivery Demo ");
                 Console.WriteLine("---------------------------------------------------------");
+
                 Delivery.Demo d = new Delivery.Demo();
                 await d.Execute(client, collection);
-
-
+                
                 Console.WriteLine("---------------------------------------------------------");
                 Console.WriteLine("DEMO: Create custom objects and populate cosmosdb graph");
                 Console.WriteLine("---------------------------------------------------------");
@@ -78,7 +78,7 @@ namespace Demo
                 Place europe = new Place() { name = "Europe",
                                              country = GraphProperty.Create("country", "AT", "MetaTag1", "Austria").AddValue("FI", "MetaTag1", "Finnland")
                 };
-                Path hobbitPath = new Path(cave, restaurant, 2.3);
+                Path hobbitPath = new Path(cave, restaurant, 2); //TODO: find out why 2.3 has an issue
 
                 await client.CreateGraphDocumentAsync<Place>(collection, cave);
                 await client.CreateGraphDocumentAsync<Place>(collection, restaurant);
@@ -102,8 +102,7 @@ namespace Demo
                         Console.WriteLine($"Vertex ==> Label:{result.Label} Name:{result.name}");
                     }
                 }
-
-
+                
                 Console.WriteLine("--------------------------------------------------------------------");
                 Console.WriteLine("DEMO: Usage of 'NextAsPOCO<T>' with GraphCommand and GraphTraversal ");
                 Console.WriteLine("--------------------------------------------------------------------");
@@ -116,7 +115,6 @@ namespace Demo
                 partialGraph.Drop();
 
                 Microsoft.Azure.Graphs.GraphCommand cmd = GraphCommandFactory.Create(graphConnection);
-                cmd.SetOutputFormat(OutputFormat.GraphSON); // This is necessary in order to be able to call "NextAsPOCO"
 
                 GraphTraversal placeTrav = cmd.g().V().HasLabel("place"); 
                 GraphTraversal edgeTrav = cmd.g().E().HasLabel("path");
@@ -137,7 +135,7 @@ namespace Demo
                 partialGraph.Drop();
 
                 Console.WriteLine("Iterating over GraphTraversal Places (Vertices) and deserializing GraphSON to custom object ");
-                GraphSerializer<Place> placeGraphSerializer = GraphSerializerFactory.CreateGraphSerializer<Place>(partialGraph);
+                IGraphSerializer<Place> placeGraphSerializer = GraphSerializerFactory.CreateGraphSerializer<Place>(partialGraph);
                 foreach (var p in placeTrav)
                 {
                     IList<Place> places = placeGraphSerializer.DeserializeGraphSON(p); // Returns more than one result in each call
@@ -151,7 +149,7 @@ namespace Demo
                 }
 
                 Console.WriteLine("Iterating over GraphTraversal Paths (Edges) and deserializing GraphSON to custom object ");
-                GraphSerializer<Path> pathGraphSerializer = GraphSerializerFactory.CreateGraphSerializer<Path>(partialGraph);
+                IGraphSerializer<Path> pathGraphSerializer = GraphSerializerFactory.CreateGraphSerializer<Path>(partialGraph);
                 foreach (var p in edgeTrav)
                 {
                     IList<Path> paths = pathGraphSerializer.DeserializeGraphSON(p); // Returns more than one result in each loop

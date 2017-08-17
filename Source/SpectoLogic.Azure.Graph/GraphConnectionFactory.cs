@@ -11,8 +11,6 @@ using System.Threading.Tasks;
 
 namespace SpectoLogic.Azure.Graph
 {
-
-
     public class GraphConnectionFactory
     {
         /// <summary>

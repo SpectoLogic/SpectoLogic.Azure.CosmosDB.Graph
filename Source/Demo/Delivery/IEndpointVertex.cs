@@ -7,8 +7,7 @@ using System.Threading.Tasks;
 
 namespace Demo.Delivery
 {
-    public interface IDemoEdge : IEdge<IDemoVertex,IDemoVertex>
+    public interface IEndpointVertex : IVertex<IDeliveryEdge,IDeliveryEdge>
     {
-        double weight { get; set; }
     }
 }
