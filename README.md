@@ -116,25 +116,36 @@ Pass name and value of the property and as many key/value pairs as meta tags. Ca
 
 ##### Using the extensions methods to access the graph
 
-To retrieve vertices always use:
+To **create** edges and vertices on CosmosDB you can use the extensions mehods on DocumentClient:
+* CreateGraphDocumentAsync&lt;T&gt;
+* UpsertGraphDocumentAsync&lt;T&gt;
+
+```csharp
+    DocumentClient client = ...
+    DocumentCollection collection = ...
+    
+    // Add vertices to the Graph DB
+    await client.CreateGraphDocumentAsync<Place>(collection, cave);
+    await client.CreateGraphDocumentAsync<Place>(collection, restaurant);
+    await client.CreateGraphDocumentAsync<Place>(collection, europe);
+    
+    // Add edge(s) to the Graph DB
+    await client.CreateGraphDocumentAsync<Path>(collection, hobbitPath);
+```
+See the 'complex' sample on how you can add multiple vertices and edges with the MemoryContext.
+
+To **retrieve vertices** always use:
 * CreateGremlinQuery&lt;Vertex&gt;(...) 
 
-To retrieve edges always use: 
+To **retrieve edges** always use: 
 * CreateGremlinQuery&lt;Edge&gt;(...)
 
-Use the ExecuteNextAsyncAsPOCO&lt;*YourType*&gt; to get a List of your C# items back.
+Use the **ExecuteNextAsyncAsPOCO&lt;*YourType*&gt;** to get a List of your C# items back.
 
 ```csharp
 
     DocumentClient client = ...
     DocumentCollection collection = ...
-    
-    // Add vertices and edges to the Graph DB
-    await client.CreateGraphDocumentAsync<Place>(collection, cave);
-    await client.CreateGraphDocumentAsync<Place>(collection, restaurant);
-    await client.CreateGraphDocumentAsync<Place>(collection, europe);
-    await client.CreateGraphDocumentAsync<Path>(collection, hobbitPath);
-
 
     // Execute a simple query to access all vertices with label "place"
     string gremlinQueryStatement = "g.V().hasLabel('place')";
