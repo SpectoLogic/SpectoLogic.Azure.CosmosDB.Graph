@@ -92,7 +92,7 @@ predefined InV and OutV properties point to instances of "Place". Also custom pr
 
 ##### Create new graph vertices and edges
 
-Creating vertices and edges is quite self explanatory. The GraphProperty which can be used to create more complex properties offers a static factory method.
+Creating vertices and edges objects is quite self explanatory. The GraphProperty which can be used to create more complex properties offers a static factory method.
 Pass name and value of the property and as many key/value pairs as meta tags. Calling the chained method "AddValue" allows to add an additional value again with several metatags. Notice that you only pass the value!
 
 ```csharp
@@ -114,9 +114,7 @@ Pass name and value of the property and as many key/value pairs as meta tags. Ca
     Path hobbitPath = new Path(cave, restaurant, 2); 
 ```
 
-##### Using the extensions methods to access the graph
-
-To **create** edges and vertices on CosmosDB you can use the extensions mehods on DocumentClient:
+Finally to **create** edges and vertices on the graph in CosmosDB use the extensions mehods on DocumentClient:
 * CreateGraphDocumentAsync&lt;T&gt;
 * UpsertGraphDocumentAsync&lt;T&gt;
 
@@ -133,6 +131,8 @@ To **create** edges and vertices on CosmosDB you can use the extensions mehods o
     await client.CreateGraphDocumentAsync<Path>(collection, hobbitPath);
 ```
 See the 'complex' sample on how you can add multiple vertices and edges with the MemoryContext.
+
+##### Using the extensions methods to access the graph
 
 To **retrieve vertices** always use:
 * CreateGremlinQuery&lt;Vertex&gt;(...) 
