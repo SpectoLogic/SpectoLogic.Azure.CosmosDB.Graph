@@ -86,6 +86,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="SpectoLogic.Azure.Graph.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="..\packages\Microsoft.CodeAnalysis.Analyzers.1.1.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.Analyzers.dll" />
@@ -99,4 +100,8 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\Microsoft.Azure.DocumentDB.1.14.0\build\Microsoft.Azure.DocumentDB.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Azure.DocumentDB.1.14.0\build\Microsoft.Azure.DocumentDB.targets'))" />
   </Target>
+  <PropertyGroup>
+    <PostBuildEvent>"C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\Tools\nuget" spec
+"C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\Tools\nuget" pack $(ProjectPath) -Prop Configuration=$(ConfigurationName)</PostBuildEvent>
+  </PropertyGroup>
 </Project>

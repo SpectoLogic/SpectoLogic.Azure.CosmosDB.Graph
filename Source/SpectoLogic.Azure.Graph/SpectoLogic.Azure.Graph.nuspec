@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$-preview</version>
+    <title>$title$</title>
+    <authors>SpectoLogic</authors>
+    <owners>$author$</owners>
+    <licenseUrl>https://github.com/SpectoLogic/SpectoLogic.Azure.CosmosDB.Graph/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/SpectoLogic/SpectoLogic.Azure.CosmosDB.Graph</projectUrl>
+    <!--<iconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</iconUrl>-->
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>Extension Library for CosmosDB Graph</summary>
+    <description>Extension Library with additional functionality for CosmosDB Graph. Allows Serialization/Deserialization of custom objects for Graph in CosmosDB. Also allows to serialize GraphObjects to native CosmosDB JSON thus allowing you to add Vertices and Edges quickly via normal DocumentDB SQL instead of Gremlin.</description>
+    <releaseNotes>Initial PreRelease</releaseNotes>
+    <copyright>Copyright ©2017 SpectoLogic e.U.</copyright>
+    <tags>cosmosdb utility graph gremlin</tags>
+  </metadata>
+</package>
