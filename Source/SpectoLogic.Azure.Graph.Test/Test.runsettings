@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>  
+<RunSettings>  
+  <TestRunParameters>  
+    <Parameter name="Account_DemoBuild_Hobbit" value="https://yourAccount.documents.azure.com:443/" />  
+    <Parameter name="Account_DemoBuild_Hobbit_Graph" value="yourAccount.graphs.azure.com:443/" />  
+    <Parameter name="Account_DemoBuild_Hobbit_Key" value="AccountSecret" />
+  </TestRunParameters>  
+</RunSettings>  

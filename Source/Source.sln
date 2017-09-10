@@ -17,6 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{
 		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpectoLogic.Azure.Graph.Test", "SpectoLogic.Azure.Graph.Test\SpectoLogic.Azure.Graph.Test.csproj", "{CF48314E-B7E8-4B67-AF9B-F758A5BC041D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,6 +37,10 @@ Global
 		{0AE3C63D-B3E1-4F3F-ADB0-07DD5E88EEF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0AE3C63D-B3E1-4F3F-ADB0-07DD5E88EEF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0AE3C63D-B3E1-4F3F-ADB0-07DD5E88EEF4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF48314E-B7E8-4B67-AF9B-F758A5BC041D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF48314E-B7E8-4B67-AF9B-F758A5BC041D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF48314E-B7E8-4B67-AF9B-F758A5BC041D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF48314E-B7E8-4B67-AF9B-F758A5BC041D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
