@@ -15,6 +15,13 @@ This library should solve the current challenges in projects with CosmosDB
 * Allow developers to store plain C# objects as Vertices and Edges
 * Allow developers to retrieve multiple types of elements with their graph relations
 
+### Installation
+
+The library is also provided as <a href="https://www.nuget.org/packages/SpectoLogic.Azure.Graph/1.0.0-preview"> Nuget-Package</a>. 
+
+>PM> Install-Package SpectoLogic.Azure.Graph -Version 1.0.0-preview 
+
+
 ### Usage
 
 You can find the sample code with the library which demonstrates the usage. However I also describe two samples here:
