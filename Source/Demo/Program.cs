@@ -2,13 +2,14 @@
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure.Graphs;
 using Microsoft.Azure.Graphs.Elements;
+using Microsoft.Extensions.Configuration;
 using SpectoLogic.Azure.CosmosDB;
 using SpectoLogic.Azure.Graph;
 using SpectoLogic.Azure.Graph.Extensions;
 using SpectoLogic.Azure.Graph.Serializer;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Demo
@@ -23,10 +24,16 @@ namespace Demo
 
         static void Main(string[] args)
         {
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json");
+
+            var config = builder.Build();
+
             #region Read Configuration
-            Account_DemoBuild_Hobbit = ConfigurationManager.AppSettings["Account_DemoBuild_Hobbit"];
-            Account_DemoBuild_Hobbit_Graph = ConfigurationManager.AppSettings["Account_DemoBuild_Hobbit_Graph"];
-            Account_DemoBuild_Hobbit_Key = ConfigurationManager.AppSettings["Account_DemoBuild_Hobbit_Key"];
+            Account_DemoBuild_Hobbit = config["Account_DemoBuild_Hobbit"];
+            Account_DemoBuild_Hobbit_Graph = config["Account_DemoBuild_Hobbit_Graph"];
+            Account_DemoBuild_Hobbit_Key = config["Account_DemoBuild_Hobbit_Key"];
             #endregion
 
             Task.Run(async () =>
