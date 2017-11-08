@@ -24,13 +24,15 @@ namespace Demo
 
         static void Main(string[] args)
         {
+            #region Read Configuration
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json");
 
+            builder.AddUserSecrets<Program>();
+
             var config = builder.Build();
 
-            #region Read Configuration
             Account_DemoBuild_Hobbit = config["Account_DemoBuild_Hobbit"];
             Account_DemoBuild_Hobbit_Graph = config["Account_DemoBuild_Hobbit_Graph"];
             Account_DemoBuild_Hobbit_Key = config["Account_DemoBuild_Hobbit_Key"];
