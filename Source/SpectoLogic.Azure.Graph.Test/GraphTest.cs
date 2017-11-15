@@ -20,7 +20,7 @@ namespace SpectoLogic.Azure.Graph.Test
     [TestClass]
     public class GraphTest
     {
-        static string CONFIG_Account_DemoBuild_Hobbit = "http://localhost:8081";
+        static string CONFIG_Account_DemoBuild_Hobbit = "https://localhost:8081/";
         static string CONFIG_Account_DemoBuild_Hobbit_Graph = "not sure";
         static string CONFIG_Account_DemoBuild_Hobbit_Key = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
         static DocumentClient client;

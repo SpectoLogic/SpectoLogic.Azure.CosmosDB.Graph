@@ -27,7 +27,7 @@ namespace SpectoLogic.Azure.Graph
             BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
             CultureInfo culture = null; // use InvariantCulture or other if you prefer
             object instantiatedType =
-              Activator.CreateInstance(graphConnectionType, flags, null,new object[] { documentClient, documentCollection }, culture);
+              Activator.CreateInstance(graphConnectionType, flags, null,new object[] { documentClient, documentCollection, null }, culture);
 
             return instantiatedType;
         }
