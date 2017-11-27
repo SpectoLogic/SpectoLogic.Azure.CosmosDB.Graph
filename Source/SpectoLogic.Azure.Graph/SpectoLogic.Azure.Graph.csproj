@@ -5,12 +5,18 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
-    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <Authors>SpectoLogic</Authors>
+    <Copyright>Copyright ©2017 SpectoLogic e.U.</Copyright>
+    <Description>Serialization/Deserialization for POCO to CosmosDB Graphs. 
+    Insert Vertices and Edges with Document DB SQL instead of gremlin.
+    Retrieve graph results as custom POCO in-memory graph representations.
+    </Description>
+    <PackageReleaseNotes>Initial PreRelease</PackageReleaseNotes>
+    <VersionPrefix>1.0.1</VersionPrefix>
+    <PackageProjectUrl>https://github.com/SpectoLogic/SpectoLogic.Azure.CosmosDB.Graph</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/SpectoLogic/SpectoLogic.Azure.CosmosDB.Graph/blob/master/LICENSE</PackageLicenseUrl>
+    <RepositoryUrl>https://github.com/SpectoLogic/SpectoLogic.Azure.CosmosDB.Graph</RepositoryUrl>
+    <PackageTags>cosmosdb utility graph gremlin</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
