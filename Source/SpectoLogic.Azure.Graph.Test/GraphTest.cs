@@ -20,9 +20,9 @@ namespace SpectoLogic.Azure.Graph.Test
     [TestClass]
     public class GraphTest
     {
-        static string CONFIG_Account_DemoBuild_Hobbit = null;
-        static string CONFIG_Account_DemoBuild_Hobbit_Graph = null;
-        static string CONFIG_Account_DemoBuild_Hobbit_Key = null;
+        static string CONFIG_Account_DemoBuild_Hobbit = "https://localhost:8081/";
+        static string CONFIG_Account_DemoBuild_Hobbit_Graph = "not sure";
+        static string CONFIG_Account_DemoBuild_Hobbit_Key = "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
         static DocumentClient client;
         static Database db;
         static DocumentCollection collection;
@@ -30,11 +30,14 @@ namespace SpectoLogic.Azure.Graph.Test
         [ClassInitialize]
         public static async Task GraphTestInitialize(TestContext context)
         {
-            CONFIG_Account_DemoBuild_Hobbit = context.Properties["Account_DemoBuild_Hobbit"].ToString();
-            CONFIG_Account_DemoBuild_Hobbit_Graph = context.Properties["Account_DemoBuild_Hobbit_Graph"].ToString();
-            CONFIG_Account_DemoBuild_Hobbit_Key = context.Properties["Account_DemoBuild_Hobbit_Key"].ToString();
+            object value;
+            if (context.Properties.TryGetValue("Account_DemoBuild_Hobbit", out value)) CONFIG_Account_DemoBuild_Hobbit = value.ToString();
+            if (context.Properties.TryGetValue("Account_DemoBuild_Hobbit_Graph", out value)) CONFIG_Account_DemoBuild_Hobbit_Graph = value.ToString();
+            if (context.Properties.TryGetValue("Account_DemoBuild_Hobbit_Key", out value)) CONFIG_Account_DemoBuild_Hobbit_Key = value.ToString();
+
             client = await CosmosDBHelper.ConnectToCosmosDB(CONFIG_Account_DemoBuild_Hobbit, CONFIG_Account_DemoBuild_Hobbit_Key);
             db = await CosmosDBHelper.CreateOrGetDatabase(client, "demodb");
+            collection = await CosmosDBHelper.CreateCollection(client, db, "thehobbit", 400, null, null, false);
         }
 
         [TestMethod]
@@ -48,8 +51,6 @@ namespace SpectoLogic.Azure.Graph.Test
         [TestMethod]
         public async Task TestSimple()
         {
-            collection = await CosmosDBHelper.CreateCollection(client, db, "thehobbit", 400, null, null, false);
-
             Simple.Place cave = new Simple.Place() { name = "Cave of Hobbit" };
             Simple.Place restaurant = new Simple.Place() { name = "Restaurant Green Dragon" };
             Simple.Place europe = new Simple.Place()
@@ -136,8 +137,6 @@ namespace SpectoLogic.Azure.Graph.Test
         [TestMethod]
         public async Task TestDelivery()
         {
-            collection = await CosmosDBHelper.CreateCollection(client, db, "thehobbit", 400, null, null, false);
-
             Assert.IsNotNull(GraphTest.client, "DocumentDB Client is null");
             Assert.IsNotNull(GraphTest.collection, "DocumentDB Collection is null");
             Assert.IsNotNull(GraphTest.db, "DocumentDB Database is null");

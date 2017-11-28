@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SpectoLogic.Azure.Graph
@@ -23,7 +24,7 @@ namespace SpectoLogic.Azure.Graph
             BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public;
             CultureInfo culture = null; // use InvariantCulture or other if you prefer
             object instantiatedType =
-              Activator.CreateInstance(typeof(GraphCommand), flags, null, new object[] { graphConnection }, culture);
+              Activator.CreateInstance(typeof(GraphCommand), flags, null, new object[] { graphConnection, null, null, default(CancellationToken) }, culture);
 
             GraphCommand cmd = (GraphCommand)instantiatedType;
             cmd.SetOutputFormat(outputformat);  // GraphSON is necessary in order to be able to call "NextAsPOCO"
