@@ -137,6 +137,9 @@ namespace SpectoLogic.Azure.Graph.Test
         [TestMethod]
         public async Task TestDelivery()
         {
+            // Force recreation
+            collection = await CosmosDBHelper.CreateOrGetCollection(client, db, "thehobbit", 400, null, null,false,true);
+
             Assert.IsNotNull(GraphTest.client, "DocumentDB Client is null");
             Assert.IsNotNull(GraphTest.collection, "DocumentDB Collection is null");
             Assert.IsNotNull(GraphTest.db, "DocumentDB Database is null");

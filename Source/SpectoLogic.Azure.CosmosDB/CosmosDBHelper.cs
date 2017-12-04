@@ -90,7 +90,7 @@ namespace SpectoLogic.Azure.CosmosDB
         /// <param name="defineCustomIndex"></param>
         /// <param name="indexChanged"></param>
         /// <returns></returns>
-        private static async Task<DocumentCollection> CreateOrGetCollection(
+        public static async Task<DocumentCollection> CreateOrGetCollection(
             DocumentClient client,
             Database docDB,
             string colName,

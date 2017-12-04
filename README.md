@@ -21,6 +21,15 @@ The library is also provided as <a href="https://www.nuget.org/packages/SpectoLo
 
 >PM> Install-Package SpectoLogic.Azure.Graph -Version 1.0.0-preview 
 
+### Set up Keys for Demo Application configuration
+
+The AppSettingsSecrets.config is gone, long life dotnet user-secrets. 
+Open command line and navigate to your Demo application folder and execute "dotnet user-secrets".
+
+```cmd
+> cd \SpectoLogic.Azure.CosmosDB.Graph-netstandard\Source\Demo
+> dotnet user-secrets set Account_DemoBuild_Hobbit_Key "<your Key>"
+```
 
 ### Usage
 
