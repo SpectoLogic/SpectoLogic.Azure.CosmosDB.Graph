@@ -18,6 +18,8 @@
     <RepositoryUrl>https://github.com/SpectoLogic/SpectoLogic.Azure.CosmosDB.Graph</RepositoryUrl>
     <PackageTags>cosmosdb utility graph gremlin</PackageTags>
     <Version>1.0.1-preview</Version>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <ItemGroup>
